@@ -3,12 +3,10 @@
 
 ## Building the demo locally
 You'll need:
-- [`wasm-pack`]
 - Node.js (version 20.x is recommended)
 - Yarn
 
-First, install Yarn dependencies. This may take a while, as it will also clone jxl-oxide git
-repository and build WebAssembly module.
+First, install Yarn dependencies. It will download prebuilt package of `jxl-oxide-wasm`.
 ```shell
 yarn install --immutable
 ```
