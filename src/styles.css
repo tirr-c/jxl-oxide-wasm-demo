@@ -17,15 +17,25 @@ html, body {
   gap: 4px;
 }
 
-.form {
+.form, .controls {
   flex: none;
   display: flex;
   justify-content: center;
 }
 
-.image {
+.image-container {
   flex: 1;
   min-height: 0;
+  overflow: auto;
+}
+
+.image-container.scale-down {
+  overflow: hidden;
+}
+
+.image-container.scale-down > img {
+  width: 100%;
+  height: 100%;
   object-fit: scale-down;
 }
 
