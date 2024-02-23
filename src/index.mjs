@@ -133,6 +133,15 @@ async function registerWorker() {
   }
 }
 
+function scaleDown(img) {
+  img.style.width = '';
+}
+
+function scaleTo1x(img) {
+  const width = img.naturalWidth / window.devicePixelRatio;
+  img.style.width = `${width}px`;
+}
+
 async function decodeIntoImageNode(file, imgNode) {
   imgNode.classList.add('loading');
 
@@ -165,17 +174,41 @@ async function decodeIntoImageNode(file, imgNode) {
   }
 }
 
+function updateScale() {
+  const imageContainer = document.querySelector('.image-container');
+  if (!imageContainer) {
+    return;
+  }
+
+  const img = imageContainer.querySelector('img');
+  if (!img) {
+    return;
+  }
+
+  const isScaleDown = imageContainer.classList.contains('scale-down');
+  if (isScaleDown) {
+    scaleDown(img);
+  } else {
+    scaleTo1x(img);
+  }
+}
+
 registerWorker().then(async () => {
-  const container = document.getElementById('container');
+  const imageContainer = document.querySelector('.image-container');
   const form = container.querySelector('.form');
   const fileInput = container.querySelector('.file');
 
   const img = document.createElement('img');
   img.className = 'image';
   img.src = sunsetLogoUrl;
+  img.addEventListener('load', () => {
+    updateScale();
+  });
+
   await img.decode().catch(() => {});
 
-  container.appendChild(img);
+  imageContainer.innerHTML = '';
+  imageContainer.appendChild(img);
   form.addEventListener('submit', ev => {
     ev.preventDefault();
 
@@ -185,3 +218,31 @@ registerWorker().then(async () => {
     }
   });
 });
+
+document.addEventListener('DOMContentLoaded', () => {
+  const imageContainer = document.querySelector('.image-container');
+  const toggleZoomBtn = document.querySelector('.btn-zoom-mode');
+  toggleZoomBtn.addEventListener('click', () => {
+    imageContainer.classList.toggle('scale-down');
+    const isScaleDown = imageContainer.classList.contains('scale-down');
+    const text = isScaleDown ? 'Change to 1x zoom' : 'Change to scale down';
+    toggleZoomBtn.textContent = text;
+
+    updateScale();
+  });
+});
+
+function watchDppxChange() {
+  updateScale();
+
+  const dppx = window.devicePixelRatio;
+  const mediaQuery = `(resolution: ${dppx}dppx)`;
+  const query = window.matchMedia(mediaQuery);
+  const cb = () => {
+    watchDppxChange();
+    query.removeEventListener('change', cb);
+  };
+  query.addEventListener('change', cb);
+}
+
+watchDppxChange();
