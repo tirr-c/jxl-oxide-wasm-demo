@@ -1,7 +1,4 @@
-const jxlOxidePromise = import('jxl-oxide-wasm').then(jxlOxide => {
-  jxlOxide.init();
-  return jxlOxide;
-});
+const jxlOxidePromise = import('jxl-oxide-wasm');
 
 let image = null;
 async function feed(buffer) {
