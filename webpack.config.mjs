@@ -15,7 +15,6 @@ export default [
       filename: 'assets/[name].[contenthash].js',
       chunkFilename: 'assets/[chunkhash].js',
       assetModuleFilename: 'assets/[name].[hash][ext][query]',
-      webassemblyModuleFilename: 'assets/[hash].wasm',
       path: outputPath,
     },
     module: {
@@ -59,18 +58,13 @@ export default [
     mode,
     entry: {
       'service-worker': './src/service-worker.mjs',
-      'jxl-decode-worker': './src/jxl-decode-worker.mjs',
     },
     target: 'webworker',
     output: {
       filename: '[name].js',
       chunkFilename: 'assets/[chunkhash].js',
       assetModuleFilename: 'assets/[name].[hash][ext][query]',
-      webassemblyModuleFilename: 'assets/[hash].wasm',
       path: outputPath,
-    },
-    experiments: {
-      asyncWebAssembly: true,
     },
   },
 ];
