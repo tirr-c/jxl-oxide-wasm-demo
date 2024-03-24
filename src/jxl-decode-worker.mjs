@@ -1,9 +1,9 @@
-const jxlOxidePromise = import('jxl-oxide-wasm');
+import initModule, { JxlImage } from 'jxl-oxide-wasm';
 
 let image = null;
 async function feed(buffer) {
   if (!image) {
-    const { JxlImage } = await jxlOxidePromise;
+    await initModule();
     image = new JxlImage();
   }
   image.feedBytes(buffer);
@@ -27,7 +27,7 @@ function render() {
 }
 
 async function decodeFile(file) {
-  const { JxlImage } = await jxlOxidePromise;
+  await initModule();
   image = new JxlImage();
 
   const reader = file.stream().getReader();
