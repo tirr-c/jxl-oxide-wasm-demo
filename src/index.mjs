@@ -9,7 +9,7 @@ const workers = new Map();
 async function registerWorker() {
   if ('serviceWorker' in navigator) {
     const registerPromise = navigator.serviceWorker
-      .register('service-worker.js', { updateViaCache: 'imports' })
+      .register(new URL('service-worker.mjs', import.meta.url), { updateViaCache: 'imports' })
       .then(
         registration => {
           if (registration.active) {

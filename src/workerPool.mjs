@@ -17,7 +17,7 @@ export class WorkerPool {
     this.#remaining -= 1;
     let worker = this.#workerPool.shift();
     if (!worker) {
-      worker = new Worker(new URL('./jxl-decode-worker.mjs', import.meta.url));
+      worker = new Worker(new URL('./jxl-decode-worker.mjs', import.meta.url), {type: 'module'});
     }
     return worker;
   }

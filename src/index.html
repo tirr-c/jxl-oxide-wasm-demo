@@ -1,26 +1,30 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>jxl-oxide-wasm Demo</title>
-  </head>
-  <body>
-    <main id="container">
-      <form class="form">
-        <label>
-          Load a file locally: <input type="file" class="file" accept=".jxl,image/jxl">
-        </label>
-        <input type="submit" value="Load">
-      </form>
-      <div class="controls">
-        <button class="btn-zoom-mode">
-          Change to 1x zoom
-        </button>
-      </div>
-      <div class="image-container scale-down">
-        Loading module, please wait…
-      </div>
-    </main>
-  </body>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>jxl-oxide-wasm Demo</title>
+  <script src="index.mjs" type="module"></script>
+</head>
+
+<body>
+  <main id="container">
+    <form class="form">
+      <label>
+        Load a file locally: <input type="file" class="file" accept=".jxl,image/jxl">
+      </label>
+      <input type="submit" value="Load">
+    </form>
+    <div class="controls">
+      <button class="btn-zoom-mode">
+        Change to 1x zoom
+      </button>
+    </div>
+    <div class="image-container scale-down">
+      Loading module, please wait…
+    </div>
+  </main>
+</body>
+
 </html>
