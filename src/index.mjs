@@ -1,7 +1,6 @@
 import { WorkerPool } from './workerPool.mjs';
 
 import './styles.css';
-import sunsetLogoUrl from './assets/sunset_logo.jxl';
 
 const workerPool = new WorkerPool(8);
 
@@ -9,7 +8,7 @@ const workers = new Map();
 async function registerWorker() {
   if ('serviceWorker' in navigator) {
     const registerPromise = navigator.serviceWorker
-      .register('service-worker.js', { updateViaCache: 'imports' })
+      .register(new URL('service-worker.mjs', import.meta.url), { updateViaCache: 'imports' })
       .then(
         registration => {
           if (registration.active) {
@@ -164,7 +163,7 @@ registerWorker().then(async () => {
 
   const img = document.createElement('img');
   img.className = 'image';
-  img.src = sunsetLogoUrl;
+  img.src = "file:///dev/null";
   img.addEventListener('load', () => {
     updateScale();
   });
