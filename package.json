@@ -15,7 +15,9 @@
     "jxl-oxide-wasm": "=0.8.0"
   },
   "devDependencies": {
+    "@parcel/config-default": "^2.12.0",
     "@parcel/core": "^2.12.0",
+    "@parcel/transformer-raw": "^2.12.0",
     "parcel": "^2.12.0"
   }
 }

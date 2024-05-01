@@ -1,6 +1,7 @@
 import { WorkerPool } from './workerPool.mjs';
 
 import './styles.css';
+import sunsetLogoUrl from './assets/sunset_logo.jxl';
 
 const workerPool = new WorkerPool(8);
 
@@ -163,7 +164,7 @@ registerWorker().then(async () => {
 
   const img = document.createElement('img');
   img.className = 'image';
-  img.src = "file:///dev/null";
+  img.src = sunsetLogoUrl;
   img.addEventListener('load', () => {
     updateScale();
   });

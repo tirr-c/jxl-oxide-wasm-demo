@@ -227,7 +227,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@parcel/config-default@npm:2.12.0":
+"@parcel/config-default@npm:2.12.0, @parcel/config-default@npm:^2.12.0":
   version: 2.12.0
   resolution: "@parcel/config-default@npm:2.12.0"
   dependencies:
@@ -798,7 +798,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@parcel/transformer-raw@npm:2.12.0":
+"@parcel/transformer-raw@npm:2.12.0, @parcel/transformer-raw@npm:^2.12.0":
   version: 2.12.0
   resolution: "@parcel/transformer-raw@npm:2.12.0"
   dependencies:
@@ -1999,7 +1999,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "jxl-oxide-wasm-demo@workspace:."
   dependencies:
+    "@parcel/config-default": "npm:^2.12.0"
     "@parcel/core": "npm:^2.12.0"
+    "@parcel/transformer-raw": "npm:^2.12.0"
     jxl-oxide-wasm: "npm:=0.8.0"
     parcel: "npm:^2.12.0"
   languageName: unknown
