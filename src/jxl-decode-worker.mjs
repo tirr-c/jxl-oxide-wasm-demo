@@ -1,4 +1,4 @@
-import initModule, { JxlImage } from 'jxl-oxide-wasm';
+import initModule, { JxlImage, version } from 'jxl-oxide-wasm';
 
 let image = null;
 async function feed(buffer) {
@@ -53,6 +53,12 @@ async function handleMessage(ev) {
   const data = ev.data;
   try {
     switch (data.type) {
+      case 'version':
+        await initModule();
+        self.postMessage(
+          { type: 'version', version: version() },
+        );
+        break;
       case 'file':
         await decodeFile(data.file);
         break;
