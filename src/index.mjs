@@ -55,7 +55,7 @@ async function registerWorker() {
 
       if (!workers.has(id)) {
         const worker = await workerPool.getWorker();
-        worker.addEventListener('message', ev => {
+        const listener = ev => {
           const data = ev.data;
           switch (data.type) {
             case 'feed':
@@ -76,14 +76,16 @@ async function registerWorker() {
               break;
           }
           return worker;
-        });
-        workers.set(id, worker);
+        };
+        worker.addEventListener('message', listener);
+        workers.set(id, { worker, listener });
       }
 
-      const worker = workers.get(id);
+      const { worker, listener } = workers.get(id);
       switch (data.type) {
         case 'done':
           workers.delete(id);
+          worker.removeEventListener('message', listener);
           workerPool.putWorker(worker);
           break;
         case 'feed':
@@ -113,17 +115,21 @@ async function decodeIntoImageNode(file, imgNode) {
 
   try {
     const blob = await new Promise((resolve, reject) => {
-      worker.addEventListener('message', ev => {
-        const data = ev.data;
-        switch (data.type) {
-          case 'blob':
-            resolve(data.blob);
-            break;
-          case 'error':
-            reject(new Error(data.message));
-            break;
-        }
-      });
+      worker.addEventListener(
+        'message',
+        ev => {
+          const data = ev.data;
+          switch (data.type) {
+            case 'blob':
+              resolve(data.blob);
+              break;
+            case 'error':
+              reject(new Error(data.message));
+              break;
+          }
+        },
+        { once: true },
+      );
       worker.postMessage({ type: 'file', file });
     });
 
@@ -155,6 +161,25 @@ function updateScale() {
   } else {
     scaleTo1x(img);
   }
+}
+
+async function getVersion() {
+  const worker = await workerPool.getWorker();
+  return new Promise(resolve => {
+    worker.addEventListener(
+      'message',
+      ev => {
+        const data = ev.data;
+        switch (data.type) {
+          case 'version':
+            resolve(data.version);
+            break;
+        }
+      },
+      { once: true },
+    );
+    worker.postMessage({ type: 'version' });
+  });
 }
 
 registerWorker().then(async () => {
@@ -193,6 +218,11 @@ document.addEventListener('DOMContentLoaded', () => {
     toggleZoomBtn.textContent = text;
 
     updateScale();
+  });
+
+  const statusElement = document.querySelector('.status');
+  getVersion().then(version => {
+    statusElement.textContent = `jxl-oxide-wasm ${version}`;
   });
 });
 

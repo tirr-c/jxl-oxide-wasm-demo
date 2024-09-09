@@ -17,7 +17,7 @@ html, body {
   gap: 4px;
 }
 
-.form, .controls {
+.form, .controls, .status {
   flex: none;
   display: flex;
   justify-content: center;
@@ -41,4 +41,9 @@ html, body {
 
 .image.loading {
   opacity: 0.5;
+}
+
+.status {
+  font-size: 0.8rem;
+  text-align: center;
 }
