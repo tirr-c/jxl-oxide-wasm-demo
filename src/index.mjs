@@ -3,101 +3,17 @@ import { WorkerPool } from './workerPool.mjs';
 import './styles.css';
 import sunsetLogoUrl from './assets/sunset_logo.jxl';
 
-const workerPool = new WorkerPool(8);
-
-const workers = new Map();
-async function registerWorker() {
-  if ('serviceWorker' in navigator) {
-    const registerPromise = navigator.serviceWorker
-      .register('service-worker.js', { updateViaCache: 'imports' })
-      .then(
-        registration => {
-          if (registration.active) {
-            registration.addEventListener('updatefound', () => {
-              const sw = registration.installing;
-              sw.addEventListener('statechange', () => {
-                const state = sw.state;
-                if (state === 'installed') {
-                  console.info('Service Worker update is available.');
-                }
-              });
-            });
-          }
-        },
-        err => {
-          console.error(`Registration failed with ${err}`);
-          throw err;
-        },
-      );
-
-    if (!navigator.serviceWorker.controller) {
-      await Promise.all([
-        registerPromise,
-        new Promise(resolve => {
-          function handle() {
-            resolve();
-            navigator.serviceWorker.removeEventListener('controllerchange', handle);
-          }
-
-          navigator.serviceWorker.addEventListener('controllerchange', handle);
-        }),
-      ]);
-    }
-
-    navigator.serviceWorker.addEventListener('message', async ev => {
-      const sw = ev.source;
-
-      const data = ev.data;
-      const id = data.id;
-      if (id == null) {
-        return;
-      }
-
-      if (!workers.has(id)) {
-        const worker = await workerPool.getWorker();
-        const listener = ev => {
-          const data = ev.data;
-          switch (data.type) {
-            case 'feed':
-              sw.postMessage({ id, type: 'feed' });
-              break;
-            case 'image':
-              sw.postMessage(
-                { id, type: 'image', image: data.image },
-                [data.image.buffer]
-              );
-              break;
-            case 'error':
-              sw.postMessage({
-                id,
-                type: 'error',
-                message: data.message,
-              });
-              break;
-          }
-          return worker;
-        };
-        worker.addEventListener('message', listener);
-        workers.set(id, { worker, listener });
-      }
-
-      const { worker, listener } = workers.get(id);
-      switch (data.type) {
-        case 'done':
-          workers.delete(id);
-          worker.removeEventListener('message', listener);
-          workerPool.putWorker(worker);
-          break;
-        case 'feed':
-          worker.postMessage({ type: 'feed', buffer: data.buffer }, [data.buffer.buffer]);
-          break;
-        case 'decode':
-          worker.postMessage({ type: 'decode' });
-          break;
+if ('serviceWorker' in window.navigator) {
+  window.navigator.serviceWorker.getRegistration()
+    .then(registration => registration?.unregister())
+    .then(ok => {
+      if (ok) {
+        window.location.reload();
       }
     });
-  }
 }
+
+const workerPool = new WorkerPool(8);
 
 function scaleDown(img) {
   img.style.width = '';
@@ -108,7 +24,7 @@ function scaleTo1x(img) {
   img.style.width = `${width}px`;
 }
 
-async function decodeIntoImageNode(file, imgNode) {
+async function decodeIntoImageNode(file, imgNode, bytes) {
   imgNode.classList.add('loading');
 
   const worker = await workerPool.getWorker();
@@ -130,7 +46,7 @@ async function decodeIntoImageNode(file, imgNode) {
         },
         { once: true },
       );
-      worker.postMessage({ type: 'file', file });
+      worker.postMessage({ type: 'file', file, bytes });
     });
 
     const prevUrl = imgNode.src;
@@ -182,32 +98,6 @@ async function getVersion() {
   });
 }
 
-registerWorker().then(async () => {
-  const imageContainer = document.querySelector('.image-container');
-  const form = container.querySelector('.form');
-  const fileInput = container.querySelector('.file');
-
-  const img = document.createElement('img');
-  img.className = 'image';
-  img.src = sunsetLogoUrl;
-  img.addEventListener('load', () => {
-    updateScale();
-  });
-
-  await img.decode().catch(() => {});
-
-  imageContainer.innerHTML = '';
-  imageContainer.appendChild(img);
-  form.addEventListener('submit', ev => {
-    ev.preventDefault();
-
-    const file = fileInput.files[0];
-    if (file) {
-      decodeIntoImageNode(file, img);
-    }
-  });
-});
-
 document.addEventListener('DOMContentLoaded', () => {
   const imageContainer = document.querySelector('.image-container');
   const toggleZoomBtn = document.querySelector('.btn-zoom-mode');
@@ -219,6 +109,61 @@ document.addEventListener('DOMContentLoaded', () => {
 
     updateScale();
   });
+
+  const partialLoadCheckbox = document.querySelector('.cb-partial-load');
+  const partialLoadSlider = document.querySelector('.range-partial-load');
+  const partialLoadLabel = document.querySelector('.label-partial-load');
+  function updateLabel() {
+    const value = partialLoadSlider.value;
+    const max = partialLoadSlider.max;
+    let label = '';
+    if (max > 0) {
+      label = `${(value * 100 / max).toFixed(2)}%`;
+    }
+    partialLoadLabel.textContent = label;
+  }
+  updateLabel();
+
+  partialLoadCheckbox.addEventListener('click', () => {
+    const checked = partialLoadCheckbox.checked;
+    partialLoadSlider.disabled = !checked;
+    if (!checked) {
+      partialLoadSlider.value = partialLoadSlider.max;
+      updateLabel();
+    }
+  });
+
+  partialLoadSlider.addEventListener('input', updateLabel);
+
+  const form = document.querySelector('.form');
+  const fileInput = document.querySelector('.file');
+  fileInput.addEventListener('input', () => {
+    const file = fileInput.files[0];
+    const size = file.size;
+    partialLoadSlider.max = size;
+    partialLoadSlider.value = size;
+    updateLabel();
+  });
+
+  const img = document.createElement('img');
+  img.className = 'image';
+  img.addEventListener('load', () => {
+    updateScale();
+  });
+
+  imageContainer.innerHTML = '';
+  imageContainer.appendChild(img);
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+
+    const bytes = partialLoadCheckbox.checked ? partialLoadSlider.value : undefined;
+    const file = fileInput.files[0];
+    if (file) {
+      decodeIntoImageNode(file, img, bytes);
+    }
+  });
+
+  decodeIntoImageNode(sunsetLogoUrl, img);
 
   const statusElement = document.querySelector('.status');
   getVersion().then(version => {

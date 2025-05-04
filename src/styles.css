@@ -23,6 +23,26 @@ html, body {
   justify-content: center;
 }
 
+.group-partial-load {
+  flex: 1;
+  margin-left: 8px;
+  display: flex;
+}
+
+.range-partial-load {
+  flex: 1;
+  margin: 0;
+}
+
+.label-partial-load {
+  flex: none;
+  display: inline-block;
+  width: 72px;
+  height: 21px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .image-container {
   flex: 1;
   min-height: 0;
