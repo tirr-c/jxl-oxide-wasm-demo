@@ -54,17 +54,4 @@ export default [
       ),
     ],
   },
-  {
-    mode,
-    entry: {
-      'service-worker': './src/service-worker.mjs',
-    },
-    target: 'webworker',
-    output: {
-      filename: '[name].js',
-      chunkFilename: 'assets/[chunkhash].js',
-      assetModuleFilename: 'assets/[name].[hash][ext][query]',
-      path: outputPath,
-    },
-  },
 ];

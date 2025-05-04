@@ -26,18 +26,40 @@ function render() {
   return output;
 }
 
-async function decodeFile(file) {
+async function decodeFile(file, bytes) {
   await initModule();
   image = new JxlImage();
 
-  const reader = file.stream().getReader();
+  let reader;
+  if (typeof file === 'string') {
+    const res = await fetch(file);
+    if (!res.ok) {
+      throw new Error('Failed to fetch resource');
+    }
+    reader = res.body.getReader();
+  } else {
+    reader = file.stream().getReader();
+  }
+
+  let bytesLeft = bytes;
   while (true) {
+    if (bytesLeft != null && bytesLeft <= 0) {
+      break;
+    }
+
     const chunk = await reader.read();
     if (chunk.done) {
       break;
     }
 
-    image.feedBytes(chunk.value);
+    let chunkBytes = chunk.value;
+    if (bytesLeft != null && chunkBytes.length > bytesLeft) {
+      chunkBytes = new Uint8Array(chunkBytes.buffer, 0, bytesLeft);
+    }
+    image.feedBytes(chunkBytes);
+    if (bytesLeft != null) {
+      bytesLeft -= chunkBytes.length;
+    }
   }
 
   const buffer = render();
@@ -60,7 +82,7 @@ async function handleMessage(ev) {
         );
         break;
       case 'file':
-        await decodeFile(data.file);
+        await decodeFile(data.file, data.bytes);
         break;
       case 'feed':
         await feed(data.buffer);
