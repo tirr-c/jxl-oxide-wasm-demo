@@ -7,19 +7,9 @@
   </head>
   <body>
     <main id="container">
-      <form class="form">
-        <label>
-          Load a file locally: <input type="file" class="file" accept=".jxl,image/jxl">
-        </label>
-        <input type="submit" value="Load">
-      </form>
       <div class="controls">
         <label>
-          <input type="checkbox" class="cb-partial-load"> Partial load
-        </label>
-        <label class="group-partial-load">
-          <input type="range" class="range-partial-load" min="0" max="1" step="1" value="1" disabled>
-          <span class="label-partial-load"></span>
+          Load a file locally: <input type="file" class="file" accept=".jxl,image/jxl">
         </label>
       </div>
       <div class="controls">
@@ -28,6 +18,16 @@
         </button>
       </div>
       <div class="image-container scale-down">
+        <img class="image">
+        <div class="error"></div>
+      </div>
+      <div class="partial-load">
+        <label class="slider-group">
+          Partial load:
+          <input type="range" class="slider" min="0" max="0" step="1" value="0" disabled="">
+          <span class="percentage"></span>
+        </label>
+        <div class="bytes"></div>
       </div>
       <div class="status">
         Loading module, please wait…
