@@ -106,7 +106,7 @@ async function handleMessage(ev) {
   } catch (err) {
     self.postMessage({
       type: 'error',
-      message: String(err),
+      err,
     });
   }
 }

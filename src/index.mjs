@@ -24,7 +24,7 @@ function scaleTo1x(img) {
   img.style.width = `${width}px`;
 }
 
-async function decodeIntoImageNode(file, imgNode, bytes) {
+async function decodeIntoImageNode(file, imgNode, errorDisplay, bytes) {
   imgNode.classList.add('loading');
 
   const worker = await workerPool.getWorker();
@@ -40,7 +40,7 @@ async function decodeIntoImageNode(file, imgNode, bytes) {
               resolve(data.blob);
               break;
             case 'error':
-              reject(new Error(data.message));
+              reject(data.err);
               break;
           }
         },
@@ -54,6 +54,12 @@ async function decodeIntoImageNode(file, imgNode, bytes) {
       URL.revokeObjectURL(prevUrl);
     }
     imgNode.src = URL.createObjectURL(blob);
+
+    errorDisplay.textContent = '';
+    errorDisplay.classList.remove('show');
+  } catch (e) {
+    errorDisplay.textContent = String(e);
+    errorDisplay.classList.add('show');
   } finally {
     imgNode.classList.remove('loading');
     workerPool.putWorker(worker);
@@ -99,6 +105,9 @@ async function getVersion() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  const img = document.querySelector('.image');
+  const errorDisplay = document.querySelector('.error');
+
   const imageContainer = document.querySelector('.image-container');
   const toggleZoomBtn = document.querySelector('.btn-zoom-mode');
   toggleZoomBtn.addEventListener('click', () => {
@@ -110,60 +119,69 @@ document.addEventListener('DOMContentLoaded', () => {
     updateScale();
   });
 
-  const partialLoadCheckbox = document.querySelector('.cb-partial-load');
-  const partialLoadSlider = document.querySelector('.range-partial-load');
-  const partialLoadLabel = document.querySelector('.label-partial-load');
+  const partialLoadControls = document.querySelector('.partial-load');
+  const partialLoadSlider = partialLoadControls.querySelector('.slider');
+  const partialLoadLabel = partialLoadControls.querySelector('.percentage');
+  const partialLoadBytes = partialLoadControls.querySelector('.bytes');
+
   function updateLabel() {
     const value = partialLoadSlider.value;
     const max = partialLoadSlider.max;
-    let label = '';
+    let percentage = '';
+    let bytes = '';
     if (max > 0) {
-      label = `${(value * 100 / max).toFixed(2)}%`;
+      percentage = `${(value * 100 / max).toFixed(2)}%`;
+      bytes = `${value} / ${max} bytes`;
     }
-    partialLoadLabel.textContent = label;
+    partialLoadLabel.textContent = percentage;
+    partialLoadBytes.textContent = bytes;
   }
   updateLabel();
 
-  partialLoadCheckbox.addEventListener('click', () => {
-    const checked = partialLoadCheckbox.checked;
-    partialLoadSlider.disabled = !checked;
-    if (!checked) {
-      partialLoadSlider.value = partialLoadSlider.max;
-      updateLabel();
+  partialLoadSlider.addEventListener('input', updateLabel);
+
+  partialLoadSlider.addEventListener('pointerup', () => {
+    const file = fileInput.files[0];
+    if (file) {
+      const bytes = partialLoadSlider.value;
+      decodeIntoImageNode(file, img, errorDisplay, bytes);
     }
   });
 
-  partialLoadSlider.addEventListener('input', updateLabel);
-
-  const form = document.querySelector('.form');
   const fileInput = document.querySelector('.file');
-  fileInput.addEventListener('input', () => {
+  async function reloadFile() {
     const file = fileInput.files[0];
-    const size = file.size;
-    partialLoadSlider.max = size;
-    partialLoadSlider.value = size;
-    updateLabel();
-  });
 
-  const img = document.createElement('img');
-  img.className = 'image';
+    if (file) {
+      const size = file.size;
+      partialLoadSlider.max = size;
+      partialLoadSlider.value = size;
+      partialLoadSlider.disabled = false;
+      updateLabel();
+
+      await decodeIntoImageNode(file, img, errorDisplay);
+      return true;
+    } else {
+      partialLoadSlider.max = 0;
+      partialLoadSlider.value = 0;
+      partialLoadSlider.disabled = true;
+      updateLabel();
+
+      return false;
+    }
+  }
+
+  fileInput.addEventListener('input', reloadFile);
+
   img.addEventListener('load', () => {
     updateScale();
   });
 
-  imageContainer.innerHTML = '';
-  imageContainer.appendChild(img);
-  form.addEventListener('submit', ev => {
-    ev.preventDefault();
-
-    const bytes = partialLoadCheckbox.checked ? partialLoadSlider.value : undefined;
-    const file = fileInput.files[0];
-    if (file) {
-      decodeIntoImageNode(file, img, bytes);
+  reloadFile().then(ok => {
+    if (!ok) {
+      decodeIntoImageNode(sunsetLogoUrl, img, errorDisplay);
     }
   });
-
-  decodeIntoImageNode(sunsetLogoUrl, img);
 
   const statusElement = document.querySelector('.status');
   getVersion().then(version => {
