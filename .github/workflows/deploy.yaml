@@ -1,0 +1,42 @@
+on:
+  push:
+    branches:
+      - main
+name: Build and deploy
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-deploy:
+    name: Build and deploy
+    runs-on: ubuntu-24.04
+    environment: production
+    env:
+      YARN_ENABLE_GLOBAL_CACHE: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
+          path: |
+            .yarn/cache
+      - name: Build
+        run: |
+          yarn && yarn build
+      - name: Deploy
+        env:
+          AWS_ENDPOINT_URL: ${{ secrets.AWS_ENDPOINT_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          aws s3 sync \
+            --checksum-algorithm CRC32 \
+            --cache-control 'public, immutable, max-age=604800' \
+            dist/assets/ s3://jxl-oxide/demo/assets/
+          aws s3 sync \
+            --checksum-algorithm CRC32 \
+            --cache-control 'no-store' \
+            --exclude 'assets/*' \
+            dist/ s3://jxl-oxide/demo/
