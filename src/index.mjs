@@ -25,7 +25,15 @@ function scaleTo1x(img) {
 }
 
 async function decodeIntoImageNode(file, imgNode, errorDisplay, bytes) {
-  imgNode.classList.add('loading');
+  let done = false;
+  new Promise(resolve => {
+    window.setTimeout(() => {
+      if (!done) {
+        imgNode.classList.add('loading');
+      }
+      resolve();
+    }, 500);
+  });
 
   const worker = await workerPool.getWorker();
 
@@ -61,6 +69,7 @@ async function decodeIntoImageNode(file, imgNode, errorDisplay, bytes) {
     errorDisplay.textContent = String(e);
     errorDisplay.classList.add('show');
   } finally {
+    done = true;
     imgNode.classList.remove('loading');
     workerPool.putWorker(worker);
   }
@@ -138,18 +147,85 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   updateLabel();
 
-  partialLoadSlider.addEventListener('input', updateLabel);
-
-  partialLoadSlider.addEventListener('pointerup', () => {
+  async function reloadFile() {
     const file = fileInput.files[0];
     if (file) {
       const bytes = partialLoadSlider.value;
-      decodeIntoImageNode(file, img, errorDisplay, bytes);
+      await decodeIntoImageNode(file, img, errorDisplay, bytes);
+    }
+  }
+
+  partialLoadSlider.addEventListener('input', updateLabel);
+
+  partialLoadSlider.addEventListener('pointerup', reloadFile);
+
+  let leftPressed = false;
+  let rightPressed = false;
+
+  partialLoadSlider.addEventListener('keydown', ev => {
+    const { key } = ev;
+    let direction = 0;
+    switch (key) {
+      case 'ArrowLeft':
+        leftPressed = true;
+        direction = -1;
+        break;
+      case 'ArrowRight':
+        rightPressed = true;
+        direction = 1;
+        break;
+      case 'ArrowUp':
+      case 'ArrowDown':
+        ev.preventDefault();
+        return;
+      default:
+        return;
+    }
+
+    ev.preventDefault();
+
+    let scale = 10;
+    if (ev.altKey) {
+      scale = 1;
+    } else if (ev.shiftKey) {
+      scale = 100;
+    }
+
+    const dValue = direction * scale;
+    let newValue = Number(partialLoadSlider.value) + dValue;
+    if (newValue < 0) {
+      newValue = 0;
+    }
+    partialLoadSlider.value = Math.min(newValue, partialLoadSlider.max);
+    updateLabel();
+  });
+
+  partialLoadSlider.addEventListener('keyup', ev => {
+    const { key } = ev;
+    switch (key) {
+      case 'ArrowLeft':
+        leftPressed = false;
+        break;
+      case 'ArrowRight':
+        rightPressed = false;
+        break;
+      case 'ArrowUp':
+      case 'ArrowDown':
+        ev.preventDefault();
+        return;
+      default:
+        return;
+    }
+
+    ev.preventDefault();
+
+    if (!leftPressed && !rightPressed) {
+      reloadFile();
     }
   });
 
   const fileInput = document.querySelector('.file');
-  async function reloadFile() {
+  async function reloadFileRefresh() {
     const file = fileInput.files[0];
 
     if (file) {
@@ -171,13 +247,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  fileInput.addEventListener('input', reloadFile);
+  fileInput.addEventListener('input', reloadFileRefresh);
 
   img.addEventListener('load', () => {
     updateScale();
   });
 
-  reloadFile().then(ok => {
+  reloadFileRefresh().then(ok => {
     if (!ok) {
       decodeIntoImageNode(sunsetLogoUrl, img, errorDisplay);
     }
