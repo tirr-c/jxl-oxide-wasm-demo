@@ -17,13 +17,13 @@ export class WorkerPool {
     this.#remaining -= 1;
     let worker = this.#workerPool.shift();
     if (!worker) {
-      worker = new Worker(new URL('./jxl-decode-worker.mjs', import.meta.url));
+      worker = new Decoder();
     }
     return worker;
   }
 
   putWorker(worker) {
-    worker.postMessage({ type: 'reset' });
+    worker.reset();
 
     const maybeResolve = this.#queue.shift();
     if (maybeResolve) {
@@ -33,5 +33,124 @@ export class WorkerPool {
 
     this.#workerPool.push(worker);
     this.#remaining += 1;
+  }
+}
+
+export class Decoder {
+  #worker;
+  #size = 0;
+  #promise = null;
+  #cancel = null;
+
+  constructor() {
+    this.#worker = new Worker(new URL('./jxl-decode-worker.mjs', import.meta.url));
+  }
+
+  async getVersion() {
+    return new Promise(resolve => {
+      this.#worker.addEventListener(
+        'message',
+        ev => {
+          const data = ev.data;
+          switch (data.type) {
+            case 'version':
+              resolve(data.version);
+              break;
+          }
+        },
+        { once: true },
+      );
+      this.#worker.postMessage({ type: 'version' });
+    });
+  }
+
+  async load(file) {
+    this.#size = 0;
+    this.#size = await new Promise((resolve, reject) => {
+      this.#worker.addEventListener(
+        'message',
+        ev => {
+          const data = ev.data;
+          switch (data.type) {
+            case 'bytes':
+              resolve(data.bytes);
+              break;
+            case 'error':
+              reject(data.err);
+              break;
+          }
+        },
+        { once: true },
+      );
+      this.#worker.postMessage({ type: 'load', file });
+    });
+    return this.#size;
+  }
+
+  get size() {
+    return this.#size;
+  }
+
+  async decode(bytes) {
+    if (this.#cancel) {
+      this.#cancel();
+      this.#cancel = null;
+    }
+
+    let cancelled = false;
+    const decodePromise = (async () => {
+      await this.#promise;
+
+      if (cancelled) {
+        return;
+      }
+
+      try {
+        const promise = this.#decodeImmediately(bytes);
+        this.#promise = promise;
+        return promise;
+      } finally {
+        this.#promise = null;
+      }
+    })();
+    const cancelPromise = new Promise((_, reject) => {
+      this.#cancel = () => {
+        cancelled = true;
+        reject(new DecodeCancelError());
+      };
+    });
+
+    return Promise.race([decodePromise, cancelPromise]);
+  }
+
+  async #decodeImmediately(bytes) {
+    return new Promise((resolve, reject) => {
+      this.#worker.addEventListener(
+        'message',
+        ev => {
+          const data = ev.data;
+          switch (data.type) {
+            case 'blob':
+              resolve(data.blob);
+              break;
+            case 'error':
+              reject(data.err);
+              break;
+          }
+        },
+        { once: true },
+      );
+      this.#worker.postMessage({ type: 'decode', bytes });
+    });
+  }
+
+  reset() {
+    this.#worker.postMessage({ type: 'reset' });
+  }
+}
+
+export class DecodeCancelError extends Error {
+  constructor() {
+    super('decode cancelled');
   }
 }

@@ -1,4 +1,4 @@
-import { WorkerPool } from './workerPool.mjs';
+import { DecodeCancelError, WorkerPool } from './workerPool.mjs';
 
 import './styles.css';
 import sunsetLogoUrl from './assets/sunset_logo.jxl';
@@ -24,7 +24,7 @@ function scaleTo1x(img) {
   img.style.width = `${width}px`;
 }
 
-async function decodeIntoImageNode(file, imgNode, errorDisplay, bytes) {
+async function decodeIntoImageNode(decoder, imgNode, errorDisplay, bytes) {
   let done = false;
   new Promise(resolve => {
     window.setTimeout(() => {
@@ -35,27 +35,8 @@ async function decodeIntoImageNode(file, imgNode, errorDisplay, bytes) {
     }, 500);
   });
 
-  const worker = await workerPool.getWorker();
-
   try {
-    const blob = await new Promise((resolve, reject) => {
-      worker.addEventListener(
-        'message',
-        ev => {
-          const data = ev.data;
-          switch (data.type) {
-            case 'blob':
-              resolve(data.blob);
-              break;
-            case 'error':
-              reject(data.err);
-              break;
-          }
-        },
-        { once: true },
-      );
-      worker.postMessage({ type: 'file', file, bytes });
-    });
+    const blob = await decoder.decode(bytes);
 
     const prevUrl = imgNode.src;
     if (prevUrl.startsWith('blob:')) {
@@ -66,12 +47,13 @@ async function decodeIntoImageNode(file, imgNode, errorDisplay, bytes) {
     errorDisplay.textContent = '';
     errorDisplay.classList.remove('show');
   } catch (e) {
-    errorDisplay.textContent = String(e);
-    errorDisplay.classList.add('show');
+    if (!(e instanceof DecodeCancelError)) {
+      errorDisplay.textContent = String(e);
+      errorDisplay.classList.add('show');
+    }
   } finally {
     done = true;
     imgNode.classList.remove('loading');
-    workerPool.putWorker(worker);
   }
 }
 
@@ -96,21 +78,9 @@ function updateScale() {
 
 async function getVersion() {
   const worker = await workerPool.getWorker();
-  return new Promise(resolve => {
-    worker.addEventListener(
-      'message',
-      ev => {
-        const data = ev.data;
-        switch (data.type) {
-          case 'version':
-            resolve(data.version);
-            break;
-        }
-      },
-      { once: true },
-    );
-    worker.postMessage({ type: 'version' });
-  });
+  const version = await worker.getVersion();
+  workerPool.putWorker(worker);
+  return version
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -134,8 +104,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const partialLoadBytes = partialLoadControls.querySelector('.bytes');
 
   function updateLabel() {
-    const value = partialLoadSlider.value;
-    const max = partialLoadSlider.max;
+    const value = Number(partialLoadSlider.value);
+    const max = Number(partialLoadSlider.max);
     let percentage = '';
     let bytes = '';
     if (max > 0) {
@@ -147,11 +117,44 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   updateLabel();
 
-  async function reloadFile() {
-    const file = fileInput.files[0];
+  const fileInput = document.querySelector('.file');
+  let decoder = null;
+
+  async function reloadFileRefresh(url) {
+    if (decoder) {
+      workerPool.putWorker(decoder);
+      decoder = null;
+    }
+
+    let file = fileInput.files[0];
+    if (file == null) {
+      file = url;
+    }
+
     if (file) {
-      const bytes = partialLoadSlider.value;
-      await decodeIntoImageNode(file, img, errorDisplay, bytes);
+      decoder = await workerPool.getWorker();
+      const bytes = await decoder.load(file);
+      partialLoadSlider.max = bytes;
+      partialLoadSlider.value = bytes;
+      partialLoadSlider.disabled = false;
+      updateLabel();
+
+      await decodeIntoImageNode(decoder, img, errorDisplay, bytes);
+      return true;
+    } else {
+      partialLoadSlider.max = 0;
+      partialLoadSlider.value = 0;
+      partialLoadSlider.disabled = true;
+      updateLabel();
+
+      return false;
+    }
+  }
+
+  async function reloadFile() {
+    if (decoder) {
+      const bytes = Number(partialLoadSlider.value);
+      await decodeIntoImageNode(decoder, img, errorDisplay, bytes);
     }
   }
 
@@ -224,40 +227,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  const fileInput = document.querySelector('.file');
-  async function reloadFileRefresh() {
-    const file = fileInput.files[0];
-
-    if (file) {
-      const size = file.size;
-      partialLoadSlider.max = size;
-      partialLoadSlider.value = size;
-      partialLoadSlider.disabled = false;
-      updateLabel();
-
-      await decodeIntoImageNode(file, img, errorDisplay);
-      return true;
-    } else {
-      partialLoadSlider.max = 0;
-      partialLoadSlider.value = 0;
-      partialLoadSlider.disabled = true;
-      updateLabel();
-
-      return false;
-    }
-  }
-
   fileInput.addEventListener('input', reloadFileRefresh);
 
   img.addEventListener('load', () => {
     updateScale();
   });
 
-  reloadFileRefresh().then(ok => {
-    if (!ok) {
-      decodeIntoImageNode(sunsetLogoUrl, img, errorDisplay);
-    }
-  });
+  reloadFileRefresh(sunsetLogoUrl);
 
   const statusElement = document.querySelector('.status');
   getVersion().then(version => {

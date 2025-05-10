@@ -1,74 +1,80 @@
 import initModule, { JxlImage, version } from 'jxl-oxide-wasm';
 
+let fileBuffer = null;
+let fileName = '';
+let loadedBytes = 0;
 let image = null;
-async function feed(buffer) {
-  if (!image) {
-    await initModule();
-    image = new JxlImage();
+
+function reset() {
+  fileBuffer = null;
+  fileName = '';
+  loadedBytes = 0;
+  if (image) {
+    image.free();
+    image = null;
   }
-  image.feedBytes(buffer);
 }
 
-function render() {
-  console.time('Decode and render');
-  const loadingDone = image.tryInit();
-  if (!loadingDone) {
-    throw new Error('Partial image, no frame data');
-  }
+async function loadFile(file) {
+  reset();
 
-  console.timeLog('Decode and render', 'started rendering');
-  const renderResult = image.render();
-
-  console.timeLog('Decode and render', 'encoding to PNG');
-  const output = renderResult.encodeToPng();
-
-  console.timeEnd('Decode and render');
-  return output;
-}
-
-async function decodeFile(file, bytes) {
-  await initModule();
-  image = new JxlImage();
-
-  let reader;
   if (typeof file === 'string') {
     const res = await fetch(file);
     if (!res.ok) {
       throw new Error('Failed to fetch resource');
     }
-    reader = res.body.getReader();
+    fileName = '';
+    fileBuffer = await res.bytes();
   } else {
-    reader = file.stream().getReader();
+    fileName = file.name;
+    fileBuffer = await file.bytes();
   }
 
-  let bytesLeft = bytes;
-  while (true) {
-    if (bytesLeft != null && bytesLeft <= 0) {
-      break;
-    }
+  return fileBuffer.length;
+}
 
-    const chunk = await reader.read();
-    if (chunk.done) {
-      break;
-    }
-
-    let chunkBytes = chunk.value;
-    if (bytesLeft != null && chunkBytes.length > bytesLeft) {
-      chunkBytes = new Uint8Array(chunkBytes.buffer, 0, bytesLeft);
-    }
-    image.feedBytes(chunkBytes);
-    if (bytesLeft != null) {
-      bytesLeft -= chunkBytes.length;
-    }
+async function decodeAndRender(bytes) {
+  if (!fileBuffer) {
+    throw new Error('file is not loaded');
   }
 
-  const buffer = render();
-  const blob = new File(
-    [buffer],
-    file.name + '.rendered.png',
-    { type: 'image/png' },
-  );
-  self.postMessage({ type: 'blob', blob });
+  if (bytes == null) {
+    bytes = fileBuffer.length;
+  }
+
+  if (!image) {
+    await initModule();
+    image = new JxlImage();
+    loadedBytes = 0;
+  } else if (loadedBytes > bytes) {
+    image.free();
+    image = new JxlImage();
+    loadedBytes = 0;
+  }
+
+  const bytesToFeed = new Uint8Array(fileBuffer.buffer, loadedBytes, bytes - loadedBytes);
+
+  try {
+    console.time('Decode and render');
+
+    image.feedBytes(bytesToFeed);
+    loadedBytes = bytes;
+
+    const loadingDone = image.tryInit();
+    if (!loadingDone) {
+      throw new Error('partial image, no frame data');
+    }
+
+    console.timeLog('Decode and render', 'started rendering');
+    const renderResult = image.render();
+
+    console.timeLog('Decode and render', 'encoding to PNG');
+    const output = renderResult.encodeToPng();
+
+    return output;
+  } finally {
+    console.timeEnd('Decode and render');
+  }
 }
 
 async function handleMessage(ev) {
@@ -81,26 +87,23 @@ async function handleMessage(ev) {
           { type: 'version', version: version() },
         );
         break;
-      case 'file':
-        await decodeFile(data.file, data.bytes);
+      case 'load': {
+        const bytes = await loadFile(data.file);
+        self.postMessage({ type: 'bytes', bytes });
         break;
-      case 'feed':
-        await feed(data.buffer);
-        self.postMessage({ type: 'feed' });
-        break;
+      }
       case 'decode': {
-        const image = render();
-        self.postMessage(
-          { type: 'image', image },
-          [image.buffer],
+        const image = await decodeAndRender(data.bytes);
+        const blob = new File(
+          [image],
+          fileName ? fileName + '.rendered.png' : 'rendered.png',
+          { type: 'image/png' },
         );
+        self.postMessage({ type: 'blob', blob });
         break;
       }
       case 'reset':
-        if (image) {
-          image.free();
-          image = null;
-        }
+        reset();
         break;
     }
   } catch (err) {
