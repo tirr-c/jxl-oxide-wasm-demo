@@ -24,13 +24,13 @@ async function loadFile(file) {
       throw new Error('Failed to fetch resource');
     }
     fileName = '';
-    fileBuffer = await res.bytes();
+    fileBuffer = await res.arrayBuffer();
   } else {
     fileName = file.name;
-    fileBuffer = await file.bytes();
+    fileBuffer = await file.arrayBuffer();
   }
 
-  return fileBuffer.length;
+  return fileBuffer.byteLength;
 }
 
 async function decodeAndRender(bytes) {
@@ -39,7 +39,7 @@ async function decodeAndRender(bytes) {
   }
 
   if (bytes == null) {
-    bytes = fileBuffer.length;
+    bytes = fileBuffer.byteLength;
   }
 
   if (!image) {
@@ -52,7 +52,7 @@ async function decodeAndRender(bytes) {
     loadedBytes = 0;
   }
 
-  const bytesToFeed = new Uint8Array(fileBuffer.buffer, loadedBytes, bytes - loadedBytes);
+  const bytesToFeed = new Uint8Array(fileBuffer, loadedBytes, bytes - loadedBytes);
 
   try {
     console.time('Decode and render');
