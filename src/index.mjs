@@ -1,7 +1,7 @@
 import { DecodeCancelError, WorkerPool } from './workerPool.mjs';
 
 import './styles.css';
-import sunsetLogoUrl from './assets/sunset_logo.jxl';
+import images from './images.mjs';
 
 if ('serviceWorker' in window.navigator) {
   window.navigator.serviceWorker.getRegistration()
@@ -87,6 +87,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const img = document.querySelector('.image');
   const errorDisplay = document.querySelector('.error');
 
+  const sampleImageSelector = document.querySelector('.sample-images');
+  const sampleImageEmptyOption = sampleImageSelector.querySelector('.empty');
+  for (let idx = 0; idx < images.length; idx += 1) {
+    const sampleImage = images[idx];
+
+    const option = document.createElement('option');
+    option.value = String(idx);
+    option.textContent = sampleImage.name;
+    sampleImageSelector.appendChild(option);
+  }
+
   const imageContainer = document.querySelector('.image-container');
   const toggleZoomBtn = document.querySelector('.btn-zoom-mode');
   toggleZoomBtn.addEventListener('click', () => {
@@ -120,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.querySelector('.file');
   let decoder = null;
 
-  async function reloadFileRefresh(url) {
+  async function reloadFileRefresh() {
     if (decoder) {
       workerPool.putWorker(decoder);
       decoder = null;
@@ -128,7 +139,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let file = fileInput.files[0];
     if (file == null) {
-      file = url;
+      const idxString = sampleImageSelector.value;
+      if (idxString !== '') {
+        file = images[Number(idxString)]?.url;
+      }
+    } else {
+      sampleImageEmptyOption.textContent = file.name;
+      sampleImageSelector.value = '';
     }
 
     if (file) {
@@ -227,13 +244,26 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  fileInput.addEventListener('input', reloadFileRefresh);
+  fileInput.addEventListener('change', reloadFileRefresh);
+
+  sampleImageSelector.addEventListener('change', () => {
+    if (sampleImageSelector.value !== '') {
+      fileInput.value = '';
+    }
+    reloadFileRefresh();
+  });
 
   img.addEventListener('load', () => {
     updateScale();
   });
 
-  reloadFileRefresh(sunsetLogoUrl);
+  if (fileInput.files[0] == null) {
+    sampleImageSelector.value = '0';
+  } else {
+    sampleImageSelector.value = '';
+  }
+
+  reloadFileRefresh();
 
   const statusElement = document.querySelector('.status');
   getVersion().then(version => {

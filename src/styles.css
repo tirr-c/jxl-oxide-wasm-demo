@@ -23,6 +23,28 @@ html, body {
   justify-content: center;
 }
 
+.controls.file-loader {
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.controls.file-loader > * {
+  flex: 0 0 auto;
+}
+
+.file-loader .file {
+  width: 200px;
+}
+
+.file-loader .sample-images {
+  width: 150px;
+  text-overflow: ellipsis;
+}
+
+.file-loader .sample-images .empty {
+  display: none;
+}
+
 .partial-load .slider-group {
   display: flex;
   align-items: center;
@@ -89,7 +111,18 @@ html, body {
   transition: opacity 0.2s;
 }
 
-.status {
+.footer {
+  height: 1rem;
+  line-height: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   font-size: 0.8rem;
-  text-align: center;
+}
+
+.footer .divider {
+  width: 1px;
+  height: 0.8rem;
+  background-color: black;
 }
