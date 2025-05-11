@@ -7,9 +7,15 @@
   </head>
   <body>
     <main id="container">
-      <div class="controls">
+      <div class="controls file-loader">
         <label>
           Load a file locally: <input type="file" class="file" accept=".jxl,image/jxl">
+        </label>
+        <label>
+          or select from sample images:
+          <select class="sample-images">
+            <option value="" class="empty"></option>
+          </select>
         </label>
       </div>
       <div class="controls">
@@ -29,8 +35,10 @@
         </label>
         <div class="bytes"></div>
       </div>
-      <div class="status">
-        Loading module, please wait…
+      <div class="footer">
+        <span class="status">Loading module, please wait…</span>
+        <div class="divider"></div>
+        <a rel="noopener noreferrer" target="_blank" href="https://github.com/tirr-c/jxl-oxide-wasm-demo">GitHub</a>
       </div>
     </main>
   </body>
