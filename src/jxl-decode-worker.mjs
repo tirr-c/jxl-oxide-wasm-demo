@@ -33,7 +33,7 @@ async function loadFile(file) {
   return fileBuffer.byteLength;
 }
 
-async function decodeAndRender(bytes) {
+async function decodeAndRender(bytes, forceSrgb) {
   if (!fileBuffer) {
     throw new Error('file is not loaded');
   }
@@ -65,6 +65,10 @@ async function decodeAndRender(bytes) {
       throw new Error('partial image, no frame data');
     }
 
+    if (forceSrgb != null) {
+      image.forceSrgb = forceSrgb;
+    }
+
     console.timeLog('Decode and render', 'started rendering');
     const renderResult = image.render();
 
@@ -93,7 +97,7 @@ async function handleMessage(ev) {
         break;
       }
       case 'decode': {
-        const image = await decodeAndRender(data.bytes);
+        const image = await decodeAndRender(data.bytes, data.forceSrgb);
         const blob = new File(
           [image],
           fileName ? fileName + '.rendered.png' : 'rendered.png',

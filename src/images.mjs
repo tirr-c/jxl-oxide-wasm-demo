@@ -1,5 +1,6 @@
 import sunsetLogoUrl from './assets/sunset_logo.jxl';
 import treeUrl from './assets/tree.jxl';
+import weesenUrl from './assets/weesen-p3-hlg.jxl';
 
 export default [
   {
@@ -9,5 +10,9 @@ export default [
   {
     name: 'Tree',
     url: treeUrl,
+  },
+  {
+    name: 'Weesen (HDR)',
+    url: weesenUrl,
   },
 ];

@@ -91,7 +91,7 @@ export class Decoder {
     return this.#size;
   }
 
-  async decode(bytes) {
+  async decode(bytes, forceSrgb) {
     if (this.#cancel) {
       this.#cancel();
       this.#cancel = null;
@@ -106,7 +106,7 @@ export class Decoder {
       }
 
       try {
-        const promise = this.#decodeImmediately(bytes);
+        const promise = this.#decodeImmediately(bytes, forceSrgb);
         this.#promise = promise;
         return promise;
       } finally {
@@ -123,7 +123,7 @@ export class Decoder {
     return Promise.race([decodePromise, cancelPromise]);
   }
 
-  async #decodeImmediately(bytes) {
+  async #decodeImmediately(bytes, forceSrgb) {
     return new Promise((resolve, reject) => {
       this.#worker.addEventListener(
         'message',
@@ -140,7 +140,7 @@ export class Decoder {
         },
         { once: true },
       );
-      this.#worker.postMessage({ type: 'decode', bytes });
+      this.#worker.postMessage({ type: 'decode', bytes, forceSrgb });
     });
   }
 
