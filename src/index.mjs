@@ -41,7 +41,7 @@ async function decodeIntoImageNode(decoder, imgNode, errorDisplay, bytes) {
   });
 
   try {
-    const blob = await decoder.decode(bytes, isHdr ? false : undefined);
+    const blob = await decoder.decode(bytes, !isHdr);
 
     const prevUrl = imgNode.src;
     if (prevUrl.startsWith('blob:')) {
