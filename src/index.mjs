@@ -4,14 +4,19 @@ import './styles.css';
 import images from './images.mjs';
 
 if ('serviceWorker' in window.navigator) {
-  window.navigator.serviceWorker.getRegistration()
-    .then(registration => registration?.unregister())
-    .then(ok => {
-      if (ok) {
+  (async () => {
+    try {
+      const registration = await window.navigator.serviceWorker.getRegistration();
+      if (await registration?.unregister()) {
         window.location.reload();
       }
-    });
+    } catch (_e) {
+      // Ignore errors
+    }
+  })();
 }
+
+const isHdr = window.matchMedia('(dynamic-range: high)').matches;
 
 const workerPool = new WorkerPool(8);
 
@@ -36,7 +41,7 @@ async function decodeIntoImageNode(decoder, imgNode, errorDisplay, bytes) {
   });
 
   try {
-    const blob = await decoder.decode(bytes);
+    const blob = await decoder.decode(bytes, isHdr ? false : undefined);
 
     const prevUrl = imgNode.src;
     if (prevUrl.startsWith('blob:')) {
