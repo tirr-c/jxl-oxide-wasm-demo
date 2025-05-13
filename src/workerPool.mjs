@@ -64,7 +64,7 @@ export class Decoder {
     });
   }
 
-  async load(file) {
+  async load(file, forceSrgb) {
     this.#size = 0;
     this.#size = await new Promise((resolve, reject) => {
       this.#worker.addEventListener(
@@ -82,7 +82,7 @@ export class Decoder {
         },
         { once: true },
       );
-      this.#worker.postMessage({ type: 'load', file });
+      this.#worker.postMessage({ type: 'load', file, forceSrgb });
     });
     return this.#size;
   }
@@ -91,7 +91,7 @@ export class Decoder {
     return this.#size;
   }
 
-  async decode(bytes, forceSrgb) {
+  async decode(bytes) {
     if (this.#cancel) {
       this.#cancel();
       this.#cancel = null;
@@ -106,7 +106,7 @@ export class Decoder {
       }
 
       try {
-        const promise = this.#decodeImmediately(bytes, forceSrgb);
+        const promise = this.#decodeImmediately(bytes);
         this.#promise = promise;
         return promise;
       } finally {
@@ -123,7 +123,7 @@ export class Decoder {
     return Promise.race([decodePromise, cancelPromise]);
   }
 
-  async #decodeImmediately(bytes, forceSrgb) {
+  async #decodeImmediately(bytes) {
     return new Promise((resolve, reject) => {
       this.#worker.addEventListener(
         'message',
@@ -140,7 +140,7 @@ export class Decoder {
         },
         { once: true },
       );
-      this.#worker.postMessage({ type: 'decode', bytes, forceSrgb });
+      this.#worker.postMessage({ type: 'decode', bytes });
     });
   }
 

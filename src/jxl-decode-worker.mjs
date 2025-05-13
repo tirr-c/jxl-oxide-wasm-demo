@@ -4,6 +4,7 @@ let fileBuffer = null;
 let fileName = '';
 let loadedBytes = 0;
 let image = null;
+let forceSrgb = null;
 
 function reset() {
   fileBuffer = null;
@@ -13,6 +14,7 @@ function reset() {
     image.free();
     image = null;
   }
+  forceSrgb = null;
 }
 
 async function loadFile(file) {
@@ -33,7 +35,7 @@ async function loadFile(file) {
   return fileBuffer.byteLength;
 }
 
-async function decodeAndRender(bytes, forceSrgb) {
+async function decodeAndRender(bytes) {
   if (!fileBuffer) {
     throw new Error('file is not loaded');
   }
@@ -46,10 +48,16 @@ async function decodeAndRender(bytes, forceSrgb) {
     await initModule();
     image = new JxlImage();
     loadedBytes = 0;
+    if (forceSrgb != null) {
+      image.forceSrgb = forceSrgb;
+    }
   } else if (loadedBytes > bytes) {
     image.free();
     image = new JxlImage();
     loadedBytes = 0;
+    if (forceSrgb != null) {
+      image.forceSrgb = forceSrgb;
+    }
   }
 
   const bytesToFeed = new Uint8Array(fileBuffer, loadedBytes, bytes - loadedBytes);
@@ -63,10 +71,6 @@ async function decodeAndRender(bytes, forceSrgb) {
     const loadingDone = image.tryInit();
     if (!loadingDone) {
       throw new Error('partial image, no frame data');
-    }
-
-    if (forceSrgb != null) {
-      image.forceSrgb = forceSrgb;
     }
 
     console.timeLog('Decode and render', 'started rendering');
@@ -92,12 +96,13 @@ async function handleMessage(ev) {
         );
         break;
       case 'load': {
+        forceSrgb = data.forceSrgb;
         const bytes = await loadFile(data.file);
         self.postMessage({ type: 'bytes', bytes });
         break;
       }
       case 'decode': {
-        const image = await decodeAndRender(data.bytes, data.forceSrgb);
+        const image = await decodeAndRender(data.bytes);
         const blob = new File(
           [image],
           fileName ? fileName + '.rendered.png' : 'rendered.png',
