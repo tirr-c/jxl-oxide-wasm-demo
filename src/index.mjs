@@ -16,7 +16,11 @@ if ('serviceWorker' in window.navigator) {
   })();
 }
 
-const isHdr = window.matchMedia('(dynamic-range: high)').matches;
+const hdrQuery = window.matchMedia('(dynamic-range: high)');
+let isHdr = hdrQuery.matches;
+hdrQuery.addEventListener('change', ev => {
+  isHdr = ev.matches;
+});
 
 const workerPool = new WorkerPool(8);
 
@@ -41,7 +45,7 @@ async function decodeIntoImageNode(decoder, imgNode, errorDisplay, bytes) {
   });
 
   try {
-    const blob = await decoder.decode(bytes, !isHdr);
+    const blob = await decoder.decode(bytes);
 
     const prevUrl = imgNode.src;
     if (prevUrl.startsWith('blob:')) {
@@ -155,7 +159,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (file) {
       decoder = await workerPool.getWorker();
-      const bytes = await decoder.load(file);
+      const bytes = await decoder.load(file, !isHdr);
       partialLoadSlider.max = bytes;
       partialLoadSlider.value = bytes;
       partialLoadSlider.disabled = false;
