@@ -2335,7 +2335,7 @@ __metadata:
     file-loader: "npm:^6.2.0"
     html-loader: "npm:^5.1.0"
     html-webpack-plugin: "npm:^5.6.3"
-    jxl-oxide-wasm: "npm:=0.12.2"
+    jxl-oxide-wasm: "npm:=0.12.3"
     mini-css-extract-plugin: "npm:^2.9.2"
     style-loader: "npm:^4.0.0"
     webpack: "npm:^5.97.1"
@@ -2344,10 +2344,10 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jxl-oxide-wasm@npm:=0.12.2":
-  version: 0.12.2
-  resolution: "jxl-oxide-wasm@npm:0.12.2"
-  checksum: 10c0/3f2549406f61585fafa05dd4b2f259667f21c63a2f56eb21e8bfe996657e6b6e8a0e5e1915e003e8772d8a65af8a6a765e6dfefa4b9fcef250cc74ae5fb2742e
+"jxl-oxide-wasm@npm:=0.12.3":
+  version: 0.12.3
+  resolution: "jxl-oxide-wasm@npm:0.12.3"
+  checksum: 10c0/77b05c97a37e370a4cac52b51f4a54d271d2035a03f48e84181b257db725a921c332bc2270223cb9e663de13a14cf6b097684df2f9394c72672bb03744c26cf5
   languageName: node
   linkType: hard
 
